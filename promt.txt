@@ -1,0 +1,93 @@
+
+hey, i am planning to implemt a " Educational Digital Processor " through a ASAIC Flow from rtl to sign off under the technology of SCL 180 nm PDK. through this pdk we gonna make tapeout 
+
+
+
+about the processor: 
+
+the process is minimal educational kit, it has different instruction set rater than normal alu instructions. it like a minimal risc v processor
+the input is 16bit first 4 is opcode next 4 is rd1 (register 1) next 4bit is rd2 (register 2) and the last 4 bit is for memory. and a additional input 
+for rst and load (for loading the user input). and the output is 8bit add additional inputs  also there for carry and flag.
+
+user interface and work flow :
+
+
+	1) the user will give the input as 16 bit and the input will carry forward to the respective register ( i have mention above ).
+	2) the user will select the operation through opcde (like 0001) [ it has 16 instructions ]
+	3) there will be 16dip switch each for is opcde, rd1, rd2 and memory and the user will give this data from left to right. the the lsb is start from rght to left for each four. 
+	4) after user enter all the data, there is a dipswitch is there for a load the data to the processor. 
+	5) and it will deocde and gives the data to the respective ports. 
+	6) after the process completed the oput will show through 8 leds the lsb is right and msb is left. 
+
+simple flow:
+
+unser enter the data -> load -> decode -> process -> output . 
+
+and there will be another button for reset. 
+
+instruction : 
+
+0000 -> memory ( which means user going to access the memory )
+0001 -> 4bit adder 
+0010 -> 4bit subractor
+0011 -> and
+0100 -> or 
+0101 -> xor
+0110 -> encoder
+0111 -> decoder
+1000 -> 4x1 mux
+1001 -> shit right
+1010 -> shift left
+1011 -> rotate
+1100 -> 2's complement
+1101 -> binary to gray
+1110 -> parity generator
+1111 ->
+
+
+for memory access : put opcode (0000) and memory addres (0010) and then load the data then the data will be shown in the output (what is presnt in the address the data will be displaed)
+
+
+sepcification : 
+
+total 16 bit input ,(input/ in [15:0])
+opcode = 4bit  ([15:12])
+rd1 = 4bit ([11:8])
+rd2 = 4bit ([7:4])
+memory address = 4bit ([3:0])
+total 16 bit input (in[15:0])  
+
+9bit output MSB 9th bit is for carry  (   output [8:0] --> [7:0] = is for ouput [8] for carry )
+
+opcode instruction = 16
+memory = 4 bit width and 16 depth
+
+
+instruction execution : 
+
+
+
+4 bit adder = rd1 + rd2 and carry or something will be displayed in MSB of the ouput.
+
+4 bit subracter rd1 - rd2
+
+and => rd1 and rd2 is the a and b even full a single bit can also execute like 4 input and gater 2 input and gate 
+
+or gate => rd1 and rd2 is the input , the unser can give all four bit as input or one or whatever the user want. similarly for xor  
+
+encoder = this is a 8 bit input and 3 bit output , (user will give the MSB 4 bit in rd1 and LSB 4 bit in rd2) so totally 8bit  (it will like [11:4] for encoder inpu )
+
+decoder => rd1 is the input, it take 3 bit ([10:8]) and the output is 8 bit
+
+multiplexer => rd1 is the input , and rd2 is seletion line ([5:4]) and whater ever the value in the [7:6] it will be not consider 
+
+shitf right (the inputs are 8bit) rd1 and rd2 similarly for shift left and rotate
+
+2's complement rd2 is lsb and rd1 is msb so totally 8bit 
+
+for one opcede 2 operation will be executed =>> binary to gray => rd1 is input gray to binary => rd2 is the input if the user was give both rd1 and rd2 the input is invalid the output is becomes 0
+
+
+for one opcode 2 operation will be executed =>> even parity generatory => rd1 is the input ,even parity checker => rd2 is the input.
+
+  

@@ -1,0 +1,197 @@
+==================================================================
+PROJECT: Educational Digital Processor (EDU-CORE)
+==================================================================
+
+GOAL:
+Design and tape out a minimal educational digital processor via a
+complete ASIC flow (RTL -> Synthesis -> Physical Design -> Sign-off)
+using the SCL 180nm PDK.
+
+CONCEPT:
+A minimal, RISC-V-inspired educational core - but instead of
+standard ALU/arithmetic instructions, it executes a custom
+instruction set covering fundamental digital-logic building blocks
+(adders, gates, encoders, decoders, MUX, shifters, etc.), intended
+as a teaching tool for digital design concepts.
+
+------------------------------------------------------------------
+1. TOP-LEVEL I/O SPECIFICATION
+------------------------------------------------------------------
+
+Signal   | Width   | Description
+---------|---------|----------------------------------------------
+in       | [15:0]  | 16-bit user input bus
+rst      | 1-bit   | Reset (button)
+load     | 1-bit   | Load signal (DIP switch) - latches "in" into
+         |         | the processor
+out      | [8:0]   | 9-bit output bus
+         |         | out[7:0] = result; out[8] = carry/flag bit
+         |         | (MSB)
+
+INPUT BUS BREAKDOWN (in[15:0]):
+
+Bits      | Field     | Width  | Purpose
+----------|-----------|--------|-------------------------------
+[15:12]   | opcode    | 4 bits | Selects operation (16 possible
+          |           |        | instructions)
+[11:8]    | rd1       | 4 bits | Operand / register 1
+[7:4]     | rd2       | 4 bits | Operand / register 2
+[3:0]     | mem_addr  | 4 bits | Memory address (used only in
+          |           |        | memory-access mode)
+
+*** OPEN POINT ***
+Bit-ordering clarification needed: input is entered via 16 DIP
+switches, "left to right," with "LSB starting from right to left
+for each four." Confirm whether switch position 1 (leftmost)
+maps to in[15] (MSB of opcode). This should be made explicit and
+consistent for both the physical panel silkscreen and the RTL
+port mapping.
+
+MEMORY:
+- Width: 4 bits
+- Depth: 16 locations (addressed by mem_addr[3:0])
+
+------------------------------------------------------------------
+2. USER WORKFLOW
+------------------------------------------------------------------
+
+1. User sets the 16 DIP switches to form the 16-bit input word
+   (opcode + rd1 + rd2 + mem_addr).
+2. User presses/toggles the Load switch -> input is latched into
+   internal registers.
+3. Internal decoder reads the opcode and routes rd1/rd2/mem_addr
+   to the correct functional block.
+4. Selected operation executes combinationally/sequentially.
+5. Result is driven onto 8 output LEDs (out[7:0], MSB on the left)
+   plus a 9th LED for carry/flag (out[8]).
+6. A separate Reset button clears all internal state.
+
+SIMPLIFIED FLOW:
+   Enter Data -> Load -> Decode -> Execute -> Display Output
+
+------------------------------------------------------------------
+3. INSTRUCTION SET (OPCODE MAP)
+------------------------------------------------------------------
+
+Opcode | Mnemonic | Operation
+-------|----------|------------------------------------------------
+0000   | MEM      | Memory access (read from mem_addr)
+0001   | ADD      | 4-bit adder: rd1 + rd2
+0010   | SUB      | 4-bit subtractor: rd1 - rd2
+0011   | AND      | Bitwise AND of rd1, rd2
+0100   | OR       | Bitwise OR of rd1, rd2
+0101   | XOR      | Bitwise XOR of rd1, rd2
+0110   | ENC      | 8-to-3 encoder
+0111   | DEC      | 3-to-8 decoder
+1000   | MUX      | 4x1 multiplexer
+1001   | SHR      | Shift right
+1010   | SHL      | Shift left
+1011   | ROT      | Rotate
+1100   | 2SC      | 2's complement
+1101   | CONV     | Binary<->Gray conversion (dual-mode)
+1110   | PARITY   | Even parity generate/check (dual-mode)
+1111   | --       | Reserved / undefined (decide behavior: NOP?
+       |          | invalid -> 0?)
+
+------------------------------------------------------------------
+4. PER-INSTRUCTION OPERAND MAPPING & BEHAVIOR
+------------------------------------------------------------------
+
+0000 - MEMORY ACCESS
+  - Set opcode = 0000, mem_addr = desired address (e.g., 0010)
+  - On load, the 4-bit value stored at that memory address is
+    displayed on the output.
+
+0001 - 4-BIT ADDER
+  - result = rd1 + rd2
+  - Carry-out drives out[8].
+
+0010 - 4-BIT SUBTRACTOR
+  - result = rd1 - rd2
+  - OPEN POINT: does out[8] represent borrow, or is it unused here?
+
+0011 - AND
+  - result = rd1 & rd2 (bitwise, 4-bit)
+  - User may treat this as up to a 4-input AND or as single-bit AND
+    depending on which bits are driven - functionally it is just a
+    4-bit bitwise AND of the two nibbles.
+
+0100 - OR
+  - result = rd1 | rd2 (bitwise, same flexibility as AND)
+
+0101 - XOR
+  - result = rd1 ^ rd2 (bitwise, same flexibility as AND/OR)
+
+0110 - ENCODER (8-to-3)
+  - 8-bit input formed by {rd1, rd2} -> in[11:4]
+  - rd1 = input bits [7:4] (MSB nibble of the 8-bit encoder input)
+  - rd2 = input bits [3:0] (LSB nibble)
+  - Output: 3-bit encoded value (placed in out[2:0], rest presumed 0)
+
+0111 - DECODER (3-to-8)
+  - Input: 3 bits taken from rd1, specifically in[10:8]
+  - Output: 8-bit one-hot output on out[7:0]
+
+1000 - 4x1 MUX
+  - Data input: rd1 (in[11:8])
+  - Select lines: lower 2 bits of rd2 -> in[5:4]
+  - in[7:6] (upper 2 bits of rd2) are don't-cares / not used
+  - OPEN POINT: since rd1 is only 4 bits, what are the 4 data
+    inputs to the MUX - is it 4 single-bit lines from rd1, selected
+    1-of-4 by the 2 select bits? Confirm the exact data source.
+
+1001 - SHIFT RIGHT
+  - 8-bit value formed from {rd1, rd2}, shifted right
+  - OPEN POINT: clarify shift amount source (fixed by 1? or encoded
+    somewhere?) and whether it's logical or arithmetic shift.
+
+1010 - SHIFT LEFT
+  - Same as above, shifted left.
+
+1011 - ROTATE
+  - Same 8-bit {rd1, rd2} input, rotated (direction OPEN POINT -
+    left or right, or configurable).
+
+1100 - 2'S COMPLEMENT
+  - 8-bit value: {rd1 (MSB nibble), rd2 (LSB nibble)}
+  - Output = 2's complement of that 8-bit value.
+
+1101 - BINARY <-> GRAY (dual-function opcode)
+  - If only rd1 is nonzero (rd2 = 0): treat rd1 as binary input ->
+    output = Gray code equivalent.
+  - If only rd2 is nonzero (rd1 = 0): treat rd2 as Gray input ->
+    output = binary equivalent.
+  - If both rd1 and rd2 are given (both nonzero): input is invalid
+    -> output = 0.
+
+1110 - PARITY (dual-function opcode)
+  - If rd1 is used: even-parity GENERATOR - output = input bits +
+    generated parity bit.
+  - If rd2 is used: even-parity CHECKER - output indicates whether
+    input has correct even parity.
+  - OPEN POINT: same ambiguity as above - what happens if both rd1
+    and rd2 are nonzero simultaneously? Recommend defining this the
+    same way as the binary/gray instruction (invalid -> 0) for
+    consistency.
+
+------------------------------------------------------------------
+5. OPEN POINTS TO RESOLVE BEFORE RTL CODING
+------------------------------------------------------------------
+
+1. DIP switch -> bit-index mapping (physical left/right vs.
+   in[15:0] indexing).
+2. Subtractor: borrow flag behavior on out[8].
+3. MUX: exact 4 data-input source bits from rd1.
+4. Shift/Rotate: shift amount (fixed vs. variable) and direction
+   convention for "rotate."
+5. Opcode 1111: define as reserved/NOP/invalid.
+6. Binary/Gray and Parity instructions: exact rule for "both rd1
+   and rd2 given" edge case (recommend: invalid -> output 0,
+   consistent across both dual-mode opcodes).
+7. Memory: how is data WRITTEN into the 16x4 memory in the first
+   place (is 0000 read-only, or is there a separate write mode)?
+
+==================================================================
+END OF DOCUMENT
+==================================================================
+
