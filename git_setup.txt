@@ -1,0 +1,69 @@
+Github Setup Flow
+////// To check git version ///////
+git –version
+/////// Create SHH key ///////////
+ssh-keygen -t ed25519 -C "YOUR_GITHUB_EMAIL"
+(after this press enter until user name is came up "[user31@eevlsidtlab031 ~]$
+")
+/////// get key ////////////
+cat ~/.ssh/id_ed25519.pub
+////// Add the key to GitHub (in github) /////
+On GitHub:
+1. Open GitHub
+2. Click your profile picture → Settings
+3. Click SSH and GPG keys
+4. Click New SSH key
+5. Title: something like Linux Lab
+6. Key type: Authentication Key
+7. Paste the public key you copied into Key
+8. Click Add SSH key
+////// Test the connection //////////
+( in terminal )
+ssh -T git@github.com
+///////// Set your Git name /////////
+git config --global user.name "Sam-Benny"
+git config --global user.email "sam143607ta@gmail.com"
+( For checking :this will show the username & mail id )
+git config --global user.name
+git config --global user.email
+ ( or )
+git config --global --list
+///////////// Repo creation ////////////
+create a repo on your github account and crete a directory name names as your repo name
+////////// Connect Linux to your GitHub repository ////////////
+Go to the repo and copy the SSH address
+git remote add origin PASTE_YOUR_SSH_ADDRESS_HERE
+//////////// Verify the connection //////////
+git remote -v
+output :
+origin git@github.com:Sam-Benny/ASIC-Project.git (fetch)
+origin git@github.com:Sam-Benny/ASIC-Project.git (push)
+///////////// File upload and remove flow /////////
+Note : we cant upload a empty file into the github
+git add file_name
+git commit -m "message/description"
+git push
+///////////// For Alias ////////////
+nano ~/.bashrc
+# Git Setup
+alias git_update='git add -A && git commit -m "add from linux" && git push'
+update() {
+ echo ""
+ echo "-----------------------------------------------------"
+ echo " Files are updated to the repo"
+ echo "-----------------------------------------------------"
+ echo ""
+ echo "Processing statements..."
+ echo ""
+ git add -A
+ git commit -m "add from linux"
+ git push
+ echo ""
+ echo "-----------------------------------------------------"
+ echo " Repo updated"
+ echo "-----------------------------------------------------"
+ echo ""
+}
+ctrl + O
+ctrl + x
+source ~/.bashrc
